@@ -1,80 +1,48 @@
-# Skin Insight thesis frontend
+# Skin Insight AI — фронтенд
 
-## Docker Compose
+React-інтерфейс для класифікації зображень шкіри, перегляду XAI-пояснень та історії.
 
-From this directory, run `docker compose up --build` to start the React development server, FastAPI backend, and MongoDB. Open `http://localhost:3000`; API docs are at `http://localhost:8000/docs`. The sibling directory must be named `skin-insight-thesis-backend`.
+## Запуск усього PoC через Docker Compose
 
-Set `API_PORT=8001` to use another API host port. The frontend's API URL follows that setting. Set `SECRET_KEY` to your own value when keeping user accounts between runs. The backend mounts its `app/classification_models` directory read-only; classification and XAI require `resnet_model.h5` there. Without it, those endpoints return HTTP 503 while the rest of the API remains available.
+Потрібні Docker і Docker Compose. Бекенд має лежати поруч із цим каталогом під назвою `skin-insight-thesis-backend`: Compose збирає його з `../skin-insight-thesis-backend`.
 
-Stop the stack with `docker compose down`. Add `-v` only if you also want to delete the MongoDB data volume.
+Для гостьового аналізу покладіть `resnet_model.h5` у `../skin-insight-thesis-backend/app/classification_models/`. Авторизований звичайний і дослідницький режими використовують реальні checkpoint-и класифікації та сегментації з [переліку бекенду](../skin-insight-thesis-backend/app/classification_models/MODELS.md). Без відповідних ваг конфігурація буде недоступною.
 
-## Local development
+З каталогу фронтенду виконайте:
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+```bash
+docker compose up --build
+```
 
-## Available Scripts
+Якщо порт `8000` зайнятий іншим сервісом, задайте інший порт API; фронтенд отримає ту саму адресу автоматично:
 
-In the project directory, you can run:
+```bash
+API_PORT=8001 docker compose up --build
+```
 
-### `npm start`
+Відкрийте <http://localhost:3000>. API доступне на <http://localhost:8000>, його документація — на <http://localhost:8000/docs>. Compose запускає фронтенд, API та MongoDB. Перший запуск може бути довгим через ML-залежності; API використовує образ `linux/amd64`, тому на Apple Silicon працює через емуляцію. Фронтенд запускається сервером розробки Create React App; після змін коду для цього сценарію повторно виконайте `docker compose up --build`.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Для локального PoC Compose задає `SECRET_KEY` за замовчуванням. Власне значення можна передати так:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+SECRET_KEY=your-local-secret docker compose up --build
+```
 
-### `npm test`
+Зупинити стек: `docker compose down`. Видалити також дані MongoDB: `docker compose down -v`. Не запускайте паралельно Compose з каталогу бекенду: обидва використовують порт `8000`.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Локальний запуск без Docker
 
-### `npm run build`
+Після запуску API задайте адресу бекенду для Create React App і встановіть залежності:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+npm ci --legacy-peer-deps
+REACT_APP_API_BASE_URL=http://localhost:8000 npm start
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Фронтенд буде доступний на <http://localhost:3000>.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Дослідницький режим
 
-### `npm run eject`
+Після реєстрації та входу виберіть Research mode у меню після Profile або відкрийте `/diagnostics?mode=research`. Це той самий покроковий екран Diagnostics: на кроці завантаження фото ліворуч є панель вибору кількох класифікаторів і перемикач сегментації. Увімкнений перемикач запускає DeepLabV3+, Otsu, Grad-CAM, U-Net і SegNet на одному фото та показує їхні маски й доступні результати класифікації для порівняння. Вимкнений використовує очищене від волосся зображення без сегментації та ваги `*_original.weights.h5`. Basic запускає лише DeepLabV3+. Basic mode зберігає попередній екран; для авторизованого користувача він використовує DeepLab → Swin з реальних ваг, для гостя — попередній ResNet API. Перед сегментацією та класифікацією волосся автоматично видаляється методом Black Hat + inpainting. В оновленому ноутбуці `REMOVE_HAIR=False`, тому наявні checkpoint-и навчалися на оригінальних зображеннях; ця відмінність може впливати на прогнози. Research показує доступні результати класифікації, сім імовірностей для вибраної конфігурації, карусель етапів обробки, порівняння масок та XAI. **XAI-теплокарти обчислюються з ваг моделей**: Integrated Gradients і Occlusion Sensitivity доступні для всіх; Grad-CAM — для EfficientNetB0; Attention Rollout, Transformer Attribution і Transition Attention Maps — для ViT/DeiT; Swin input attribution — для Swin. Нові результати не додаються до історії. Окремий `/developer` тимчасово доступний як референс під час перенесення інтерфейсу.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Контракт Research API реалізовано на `/api/diagnostics/analyze`, `/api/diagnostics/capabilities` та `/api/diagnostics/explain` і описано в README бекенду.

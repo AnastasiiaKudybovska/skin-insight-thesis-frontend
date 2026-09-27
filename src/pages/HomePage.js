@@ -6,6 +6,7 @@ import InstructionSteps from '../components/InstructionSteps/InstructionSteps';
 import MainFeatures from '../components/MainFeatures/MainFeatures';
 import WarningBlock from '../components/WarningBlock/WarningBlock';
 import DiseasesCarousel from '../components/DiseaseCarousel/DiseaseCarousel';
+import VersionModes from '../components/VersionModes/VersionModes';
 
 const HomePage = () => {
 
@@ -38,6 +39,7 @@ const HomePage = () => {
       <section id="instructions" >
          <InstructionSteps />
       </section>
+      <VersionModes />
      
       <MainFeatures />
       <WarningBlock />

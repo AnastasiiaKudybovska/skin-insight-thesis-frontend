@@ -5,6 +5,7 @@ const API_URL = process.env.REACT_APP_API_BASE_URL;
 export const ImageService = {
   getImage: async (imageId, isAuthenticated) => {
     if (!imageId) return null;
+    if (imageId.startsWith('data:')) return imageId;
     if (isAuthenticated) {
       try {
         const response = await axios.get(`${API_URL}/api/xai/images/${imageId}`, {

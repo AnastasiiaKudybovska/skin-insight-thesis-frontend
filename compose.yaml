@@ -20,6 +20,7 @@ services:
       ALGORITHM: HS256
     volumes:
       - ../skin-insight-thesis-backend/app/classification_models:/app/app/classification_models:ro
+      - ../skin-insight-thesis-backend/app/segmentation_models:/app/app/segmentation_models:ro
     depends_on:
       mongo:
         condition: service_healthy

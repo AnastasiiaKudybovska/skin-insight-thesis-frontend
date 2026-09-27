@@ -7,9 +7,10 @@ import NotAuthenticatedDialog from '../Modals/NotAuthenticatedDialog';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { diagnosticService } from '../../services/diagnosticService';
+import { experimentService } from '../../services/experimentService';
 import useStyledSnackbar from '../../hooks/useStyledSnackbar';
 
-const ImageUpload = ({ onNext, setImage, initialImage, setAnalysisResults }) => {
+const ImageUpload = ({ onNext, setImage, initialImage, setAnalysisResults, mode = 'basic', models = [], segmentationEnabled = true, onResearchResults, canAnalyze = true }) => {
   const { t } = useTranslation('diagnostic');
   const { showError } = useStyledSnackbar();
   const [preview, setPreview] = useState(initialImage ? URL.createObjectURL(initialImage) : null);
@@ -70,11 +71,21 @@ const ImageUpload = ({ onNext, setImage, initialImage, setAnalysisResults }) => 
   };
 
   const handleNextClick = async () => {
-    if (!initialImage) return;
+    if (!initialImage || !canAnalyze) return;
     
     try {
       setIsAnalyzing(true);
-      const response = await diagnosticService.classifyImage(initialImage);
+      const response = mode === 'research'
+        ? await experimentService.analyze(initialImage, models, segmentationEnabled)
+        : await diagnosticService.classifyImage(initialImage);
+
+      if (mode === 'research') {
+        if (!response.results?.length) throw new Error(t('analysis_failed'));
+        onResearchResults(response);
+        setAnalysisResults(response.results[0]);
+        onNext();
+        return;
+      }
       
       if (response.error) {
         showError(t('analysis_failed'));
@@ -90,18 +101,20 @@ const ImageUpload = ({ onNext, setImage, initialImage, setAnalysisResults }) => 
     } catch (error) {
       console.error('Analysis failed:', error);
       showError(t('analysis_failed'));
-      setAnalysisResults({
-        isError: true,
-        error: error.message || 'Analysis failed'
-      });
-      onNext();
+      if (mode === 'basic') {
+        setAnalysisResults({
+          isError: true,
+          error: error.message || 'Analysis failed'
+        });
+        onNext();
+      }
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   return (
-    <Box sx={{ textAlign: 'center', maxWidth: 600, mx: 'auto' }}>
+    <Box sx={{ textAlign: 'center', maxWidth: mode === 'research' ? 700 : 600, mx: 'auto' }}>
       <Box
         {...getRootProps()}
         onClick={undefined}
@@ -254,7 +267,7 @@ const ImageUpload = ({ onNext, setImage, initialImage, setAnalysisResults }) => 
             variant="contained"
             size="large"
             onClick={handleNextClick}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || !canAnalyze}
             sx={{ 
               mt: 4,  
               px: 4, 

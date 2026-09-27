@@ -155,7 +155,7 @@ const InstructionSteps = () => {
                 height: 'auto',   
                 display: 'block', 
               }}
-              />dcs 
+              />
             </Box>
           </motion.div>
         </Box>

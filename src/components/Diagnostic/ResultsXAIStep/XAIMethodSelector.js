@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { diagnosticService } from '../../../services/diagnosticService';
 import useStyledSnackbar from '../../../hooks/useStyledSnackbar';
+import { useAuth } from '../../../hooks/useAuth';
 
 const PrimaryRadio = styled(Radio)(({ theme }) => ({
   color: 'var(--grey-color)',
@@ -21,14 +22,15 @@ const PrimaryRadio = styled(Radio)(({ theme }) => ({
   },
 }));
 
-const XAIMethodSelector = ({ onMethodSelect, image, historyId }) => {
+const XAIMethodSelector = ({ onMethodSelect, image, historyId, runId, results }) => {
   const { t } = useTranslation('diagnostic');
+  const { isAuthenticated } = useAuth();
   const { showError, showWarning } = useStyledSnackbar();
-  const [selectedMethod, setSelectedMethod] = useState('gradcam');
+  const [selectedMethod, setSelectedMethod] = useState(isAuthenticated ? 'occlusion_sensitivity' : 'gradcam');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const methods = [
+  const legacyMethods = [
     {
       id: 'gradcam',
       name: 'Grad-CAM',
@@ -56,6 +58,12 @@ const XAIMethodSelector = ({ onMethodSelect, image, historyId }) => {
     }
   ];
 
+  const transformerMethods = [
+    { id: 'integrated_gradients', name: 'Integrated Gradients', description: t('xaiMethods.igDemoDesc') },
+    { id: 'occlusion_sensitivity', name: 'Occlusion Sensitivity', description: t('xaiMethods.occlusionSensitivityDesc') },
+  ];
+  const methods = isAuthenticated ? transformerMethods : legacyMethods;
+
   const handleMethodChange = (event) => {
     setSelectedMethod(event.target.value);
     setError(null); 
@@ -76,7 +84,9 @@ const XAIMethodSelector = ({ onMethodSelect, image, historyId }) => {
       const explanation = await diagnosticService.getXAIExplanation(
         selectedMethod,
         image,
-        historyId = {historyId}
+        historyId,
+        runId,
+        results
       );
     
       onMethodSelect({explanation});

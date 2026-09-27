@@ -17,6 +17,7 @@ import { SnackbarProvider } from 'notistack';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './hooks/useAuth';
 import HistoryDetailPage from './pages/HistoryDetailPage';
+import ExperimentPage from './pages/ExperimentPage';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -52,6 +53,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage/>} />
             <Route path="/diagnostics" element={<DiagnosticPage/>} />
+            <Route path="/developer" element={<ProtectedRoute><ExperimentPage mode="developer" /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage/>} />
             <Route path="/signup" element={<RegisterPage/>} />
             <Route 
