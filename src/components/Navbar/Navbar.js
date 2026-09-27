@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Box, IconButton, Menu, MenuItem, useMediaQuery, useTheme, Avatar, Link } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Box, Button, IconButton, Menu, MenuItem, useMediaQuery, useTheme, Avatar, Link } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LanguageIcon from '@mui/icons-material/Language';
 import CloseIcon from '@mui/icons-material/Close';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ReactCountryFlag from 'react-country-flag';
 import { useAuth } from '../../hooks/useAuth';
 import './Navbar.css';
@@ -16,8 +17,23 @@ const Navbar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langAnchorEl, setLangAnchorEl] = useState(null);
+  const [modeAnchorEl, setModeAnchorEl] = useState(null);
   const [showSlogan, setShowSlogan] = useState(false);
   const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const requestedMode = location.pathname === '/diagnostics'
+    ? new URLSearchParams(location.search).get('mode')
+    : localStorage.getItem('diagnostic_mode');
+  const diagnosticMode = isAuthenticated && requestedMode === 'research' ? 'research' : 'basic';
+  const diagnosticsPath = diagnosticMode === 'research' ? '/diagnostics?mode=research' : '/diagnostics';
+
+  const selectMode = (mode) => {
+    localStorage.setItem('diagnostic_mode', mode);
+    setModeAnchorEl(null);
+    setMobileMenuOpen(false);
+    navigate(mode === 'research' ? '/diagnostics?mode=research' : '/diagnostics');
+  };
 
   const handleLangMenuOpen = (event) => setLangAnchorEl(event.currentTarget);
   const handleLangMenuClose = () => setLangAnchorEl(null);
@@ -30,15 +46,13 @@ const Navbar = () => {
   const navItems = [
     { name: t('nav.home'), path: '/' },
     { name: t('nav.instructions'), path: '#instructions' },
-    { name: t('nav.diagnostics'), path: '/diagnostics' },
+    { name: t('nav.diagnostics'), path: diagnosticsPath },
     { name: t('nav.about'), path: '/about' }
   ];
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
-
-    const navigate = useNavigate();
 
  const handleNavClick = (path) => {
   if (path.startsWith('#')) {
@@ -160,6 +174,13 @@ const Navbar = () => {
                 >
                   {t('nav.profile')}
                 </Typography>
+                <Button
+                  onClick={(event) => setModeAnchorEl(event.currentTarget)}
+                  endIcon={<ArrowDropDownIcon />}
+                  sx={{ mx: 1, px: 2, borderRadius: '24px', bgcolor: '#e3edef', color: '#276b60', fontWeight: 700, textTransform: 'none', whiteSpace: 'nowrap', '&:hover': { bgcolor: '#d5e5e3' } }}
+                >
+                  {t(`nav.${diagnosticMode}Mode`)}
+                </Button>
               </>
             ) : (
               <>
@@ -268,6 +289,15 @@ const Navbar = () => {
                 </Typography>
               </div>
               <div className="mobile-menu-item">
+                <Button
+                  onClick={(event) => setModeAnchorEl(event.currentTarget)}
+                  endIcon={<ArrowDropDownIcon />}
+                  sx={{ mx: 2, my: 1, px: 2, borderRadius: '24px', bgcolor: '#e3edef', color: '#276b60', fontWeight: 700, textTransform: 'none' }}
+                >
+                  {t(`nav.${diagnosticMode}Mode`)}
+                </Button>
+              </div>
+              <div className="mobile-menu-item">
                 <Typography onClick={handleLogout}
                   sx={{ 
                     width: '100%', display: 'block', padding: '8px 16px', color: 'var(--white-color)',
@@ -323,6 +353,10 @@ const Navbar = () => {
           </div>
         </div>
 
+        <Menu anchorEl={modeAnchorEl} open={Boolean(modeAnchorEl)} onClose={() => setModeAnchorEl(null)}>
+          <MenuItem selected={diagnosticMode === 'basic'} onClick={() => selectMode('basic')}>{t('nav.basicMode')}</MenuItem>
+          <MenuItem selected={diagnosticMode === 'research'} onClick={() => selectMode('research')}>{t('nav.researchMode')}</MenuItem>
+        </Menu>
         <Menu anchorEl={langAnchorEl} open={Boolean(langAnchorEl)} onClose={handleLangMenuClose}>
           <MenuItem onClick={() => changeLanguage('uk')}>
             <ReactCountryFlag countryCode="UA" style={{ marginRight: '8px', fontSize: '1.2em'}} svg/>

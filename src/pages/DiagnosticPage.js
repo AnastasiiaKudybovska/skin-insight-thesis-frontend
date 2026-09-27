@@ -1,22 +1,77 @@
-import React, { useState } from 'react';
-import { Box, Container, Typography, Button } from '@mui/material';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Box, Container, Typography, Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { experimentService } from '../services/experimentService';
 import ImageUpload from '../components/Diagnostic/ImageUpload';
 import AnalysisStep from '../components/Diagnostic/AnalysisStep/AnalysisStep';
 import ResultsXAIStep from '../components/Diagnostic/ResultsXAIStep/ResultsXAIStep';
 import DiagnosticStepper from '../components/Diagnostic/DiagnosticStepper';
+import ResearchSettings from '../components/Diagnostic/ResearchSettings';
+import ResearchAnalysisStep from '../components/Diagnostic/ResearchAnalysisStep';
+import ResearchXaiStep from '../components/Diagnostic/ResearchXaiStep';
+import { segmentationMethods } from '../utils/experimentOptions';
 
 const DiagnosticPage = () => {
   const { t } = useTranslation('diagnostic');
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  const requestedMode = new URLSearchParams(location.search).get('mode');
+  const mode = isAuthenticated && requestedMode === 'research' ? 'research' : 'basic';
   const [activeStep, setActiveStep] = useState(0);
   const [image, setImage] = useState(null);
   const [analysisResults, setAnalysisResults] = useState(null);
+  const [researchAnalysis, setResearchAnalysis] = useState(null);
+  const [models, setModels] = useState(['swin']);
+  const [segmentationEnabled, setSegmentationEnabled] = useState(true);
+  const [capabilities, setCapabilities] = useState(null);
+  const [xaiSupport, setXaiSupport] = useState(null);
+  const stepContentRef = useRef(null);
+
+  useEffect(() => {
+    if (isAuthenticated) localStorage.setItem('diagnostic_mode', mode);
+    setActiveStep(0);
+    setImage(null);
+    setAnalysisResults(null);
+    setResearchAnalysis(null);
+  }, [isAuthenticated, mode]);
+
+  useEffect(() => {
+    if (mode !== 'research') return undefined;
+    let active = true;
+    experimentService.capabilities().then((response) => {
+      if (active) {
+        setCapabilities(response.configurations);
+        setXaiSupport(response.xai_methods);
+      }
+    }).catch(() => {
+      if (active) {
+        setCapabilities(null);
+        setXaiSupport(null);
+      }
+    });
+    return () => { active = false; };
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== 'research' || activeStep === 0) return undefined;
+    const frame = requestAnimationFrame(() => stepContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    return () => cancelAnimationFrame(frame);
+  }, [activeStep, mode]);
+
+  const selectedSegmentations = segmentationEnabled
+    ? segmentationMethods.filter((method) => method.id !== 'none').map((method) => method.id)
+    : ['none'];
+  const canAnalyze = mode === 'basic' || (models.length > 0
+    && (!capabilities || models.some((model) => selectedSegmentations.some((segmentation) => capabilities[model]?.includes(segmentation)))));
 
   const handleReset = () => {
     setActiveStep(0);
     setImage(null);
     setAnalysisResults(null);
+    setResearchAnalysis(null);
   };
 
   const handleBack = () => {
@@ -27,23 +82,54 @@ const DiagnosticPage = () => {
     { 
       label: t('steps.upload'), 
       component: (
-        <ImageUpload 
-          onNext={() => setActiveStep(1)} 
-          setImage={setImage} 
-          initialImage={image}
-          setAnalysisResults={setAnalysisResults}
-        />
+        <Box sx={mode === 'research' ? {
+          display: 'grid',
+          width: '100%',
+          maxWidth: { xs: 700, lg: 1280 },
+          mx: 'auto',
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '420px minmax(0, 700px)' },
+          justifyContent: { lg: 'center' },
+          gap: { xs: 3, lg: 4 },
+          alignItems: 'start',
+          mt: 4,
+        } : undefined}>
+          {mode === 'research' && <ResearchSettings
+            models={models}
+            segmentationEnabled={segmentationEnabled}
+            onModelsChange={setModels}
+            onSegmentationEnabledChange={setSegmentationEnabled}
+          />}
+          <ImageUpload
+            onNext={() => setActiveStep(1)}
+            setImage={setImage}
+            initialImage={image}
+            setAnalysisResults={setAnalysisResults}
+            mode={mode}
+            models={models}
+            segmentationEnabled={segmentationEnabled}
+            onResearchResults={setResearchAnalysis}
+            canAnalyze={canAnalyze}
+          />
+        </Box>
       ) 
     },
     { 
       label: t('steps.analysis'), 
-      component: <AnalysisStep results={analysisResults} image={image} handleBack={handleBack}  onNext={() => setActiveStep(2)} /> 
+      component: mode === 'research' && researchAnalysis
+        ? <ResearchAnalysisStep analysis={researchAnalysis} image={image} handleBack={handleBack} onNext={() => setActiveStep(2)} />
+        : <AnalysisStep results={analysisResults} image={image} handleBack={handleBack} onNext={() => setActiveStep(2)} />
     },
     { 
       label: t('steps.results'), 
-      component: <ResultsXAIStep results={analysisResults} image={image} handleBack={handleBack} /> 
+      component: mode === 'research' && researchAnalysis
+        ? <ResearchXaiStep analysis={researchAnalysis} support={xaiSupport} />
+        : <ResultsXAIStep results={analysisResults} image={image} handleBack={handleBack} />
     }
   ];
+
+  if (requestedMode === 'research' && !isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: '/diagnostics?mode=research' }} />;
+  }
 
   return (
     <Box
@@ -56,7 +142,7 @@ const DiagnosticPage = () => {
         background: 'var(--white-color)', 
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth={mode === 'research' ? 'xl' : 'lg'}>
         <Typography
           variant="h3"
           component="h1"
@@ -72,10 +158,13 @@ const DiagnosticPage = () => {
           {t('title')}
         </Typography>
 
+        {analysisResults?.demo && <Alert severity="warning" sx={{ mb: 3 }}>{t('demoResultNotice')}</Alert>}
+
         <DiagnosticStepper activeStep={activeStep} steps={steps}/>
 
         <motion.div
-          key={`step-${activeStep}`}
+          ref={stepContentRef}
+          key={`${mode}-step-${activeStep}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useStyledSnackbar from './useStyledSnackbar';
 
 export const useAuth = () => {
@@ -7,6 +7,7 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useStyledSnackbar();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleApiError = (error) => {
     if (error.detail) {
@@ -30,6 +31,7 @@ export const useAuth = () => {
   const clearTokens = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('diagnostic_mode');
   };
 
   const login = async (credentials) => {
@@ -53,7 +55,7 @@ export const useAuth = () => {
       setUser(data);
       storeTokens(data);
       showSuccess('login_success');
-      navigate('/diagnostics');
+      navigate(location.state?.from === '/diagnostics?mode=research' ? location.state.from : '/diagnostics');
       return data;
     } catch (error) {
       const errorKey = handleApiError(error);
@@ -143,7 +145,7 @@ export const useAuth = () => {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/api/auth/me`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/users/`,
         {
           headers: { 'Authorization': `Bearer ${token}` },
         }

@@ -36,7 +36,18 @@ const XAIExplanationView = ({ explanation, onBack }) => {
   { id: 'gradcam', title: 'Grad-CAM' },
   { id: 'integrated gradients', title: `${t('xaiMethods.igTitle')}` },
   { id: 'anchor', title: 'Anchor' },
+  { id: 'attention_rollout', title: 'Attention Rollout' },
+  { id: 'transformer_attribution', title: 'Transformer Attribution' },
+  { id: 'integrated_gradients', title: 'Integrated Gradients' },
+  { id: 'occlusion_sensitivity', title: 'Occlusion Sensitivity' },
 ];
+
+  const transformerDescriptionKeys = {
+    attention_rollout: 'attentionRolloutDescLong',
+    transformer_attribution: 'transformerAttributionDescLong',
+    integrated_gradients: 'igDemoDescLong',
+    occlusion_sensitivity: 'occlusionSensitivityDescLong',
+  };
 
   useEffect(() => {
     setCurrentImageId(isSHAP ? heatmapImageId : (showHeatmap ? heatmapImageId : overlayImageId));
@@ -274,7 +285,7 @@ const XAIExplanationView = ({ explanation, onBack }) => {
         {firstExplanation?.method && (
           <Box sx={{ mb: 2, p: 2, backgroundColor: 'var(--white-color)', borderRadius: '8px' }}>
             <Typography variant="body2" sx={{ color: "var(--grey-text-color)", fontWeight: 600, fontFamily: '"Raleway", serif' }}>
-              {t(`xaiMethods.${firstExplanation.method}DescLong`, 
+              {t(`xaiMethods.${transformerDescriptionKeys[method] || `${firstExplanation.method}DescLong`}`,
                  t('xaiMethods.igDescLong'))}
             </Typography>
           </Box>

@@ -49,6 +49,8 @@ const ResultsXAIStep = ({ results, image }) => {
             onMethodSelect={handleMethodSelect} 
             image={image} 
             historyId={results.history_id}
+            runId={results.run_id}
+            results={results}
           />
         )}
       </Box>
