@@ -1,4 +1,14 @@
-# Getting Started with Create React App
+# Skin Insight thesis frontend
+
+## Docker Compose
+
+From this directory, run `docker compose up --build` to start the React development server, FastAPI backend, and MongoDB. Open `http://localhost:3000`; API docs are at `http://localhost:8000/docs`. The sibling directory must be named `skin-insight-thesis-backend`.
+
+Set `API_PORT=8001` to use another API host port. The frontend's API URL follows that setting. Set `SECRET_KEY` to your own value when keeping user accounts between runs. The backend mounts its `app/classification_models` directory read-only; classification and XAI require `resnet_model.h5` there. Without it, those endpoints return HTTP 503 while the rest of the API remains available.
+
+Stop the stack with `docker compose down`. Add `-v` only if you also want to delete the MongoDB data volume.
+
+## Local development
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

@@ -1,0 +1,38 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_BASE_URL: http://localhost:${API_PORT:-8000}
+      HOST: 0.0.0.0
+    depends_on:
+      - api
+
+  api:
+    platform: linux/amd64
+    build: ../skin-insight-thesis-backend
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      MONGODB_URL: mongodb://mongo:27017
+      SECRET_KEY: ${SECRET_KEY:-local-poc-secret-change-me}
+      ALGORITHM: HS256
+    volumes:
+      - ../skin-insight-thesis-backend/app/classification_models:/app/app/classification_models:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mongo_data:
